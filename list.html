@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="utf-8">
+    <title>wfg interface</title>
+    <meta http-eqiv="Content-Type" content="text/html; charset=UTF-8">
+    <script src="./lib/jquery.1.11.0.min.js"></script>
+    <script src="./lib/jquery.xdomainajax.js"></script>
+    <script src="./lib/tableExport.js"></script>
+    <script src="./lib/jquery.tablesorter.js"></script>
+</head>
+
+<style>
+body{
+    font-family: Meiryo;
+    font-size: 12px;
+/*    padding: 0px;
+    margin: 0px;*/
+}
+
+table{
+    border: 1px solid black;
+    border-collapse: collapse;
+}
+table th{
+    background-color: skyblue;
+}
+input[type="button"]{
+    background-color: skyblue;
+}
+table th, tr, td{
+    border: 1px solid black;
+    border-collapse: collapse;
+    font-size: 12px;
+}
+table .files{
+    font-size: 8px;
+}
+
+
+/*#modal{
+    padding: 30px;
+    display: none;
+    width: 500px;
+    height: 700px;
+    border: 1px solid black;
+}
+#modal input{
+    width: 200px;
+    height: 30px;
+    font-size: 16px;
+}
+#modal input[type="file"]{
+    width: 90%;
+}
+#modal input[type="text"]{
+    width: 200px;
+    height: 30px;
+}
+#modal input[type="button"]{
+    width: 50px;
+    height: 30px;
+}*/
+
+p{
+    margin:0px;
+    padding:0px;
+    margin-top: 10px;
+}
+.input_text{
+    width: 300px;
+    height: 30px;
+    font-size: 20px;
+}
+#welcome{
+    position: absolute;
+    right: 10px;
+}
+
+
+#result_box{
+    display: none;
+}
+
+
+
+/*.icon{
+    background-image: url("./dna.gif");
+    background-size: cover;
+}*/
+</style>
+
+
+<script>
+
+var username = "";
+
+$(function(){
+
+    var username = localStorage.getItem("user")
+    $("#username").text(username)
+
+    $("#result_box").load("./result.html")
+    //$("#disease_id").load("./rev.html")
+    //$("#pager_area").load("./pager.html")
+    $("#list_box").load("./json_list.html")
+
+
+})
+
+
+
+
+
+</script>
+
+<body>
+
+<span id="welcome">ようこそ<span id="username"></span>さん！</span>
+
+
+
+
+<div id="list_box"></div>
+<br>
+
+
+<div id="result_box">
+</div>
+
+
+
+
+
+</body>
+
+
+</html>

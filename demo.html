@@ -1,0 +1,1203 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="utf-8">
+    <title>demo clinical trials</title>
+    <meta http-eqiv="Content-Type" content="text/html; charset=UTF-8">
+    <script src="./lib/jquery.1.11.0.min.js"></script>
+    <script src="./lib/jquery.xdomainajax.js"></script>
+    <script src="./lib/tableExport.js"></script>
+    <script src="./lib/jquery.tablesorter.js"></script>
+    <script src="./lib/jquery.dataTables.js"></script>
+    <link rel="stylesheet" type="text/css" href="./lib/jquery.dataTables.css">
+
+</head>
+
+<style>
+body{
+    font-family: Meiryo;
+/*    padding: 0px;
+    margin: 0px;*/
+}
+table{
+/*    border: 1px solid black;*/
+    border-collapse: collapse;
+    font-size: 12px;
+}
+table tr{
+    border: 1px solid darkgray;
+}
+.table_header{
+    background-color: LightSkyBlue;
+/*    border: solid 1px black;*/
+    text-align: center;
+}
+table th, tr, td{
+    word-break: break-all;
+}
+a{
+    word-break: break-all;
+}
+hr{
+    margin: 0px;
+}
+label{
+    font-size: 11px;
+}
+p{
+    margin, padding: 0px;
+}
+#result_table{
+    width: 100%;
+}
+
+
+.status, .status_j{
+    text-align: center;
+    display: table-cell;
+    vertical-align: middle;
+/*    color: white;*/
+    width: 95px;
+    height: 40px;
+    text-decoration: bold;
+    font-size: 13px;
+    color: white;
+}
+.table_blank{
+    margin, padding: 0px;
+    border-right: 1px solid #ddd;
+}
+#drug_txt, #drug_txt_2, #drug_txt_3{
+    width: 150px;
+    height: 20px;
+    font-size: 15px;
+}
+input[type="button"]{
+    width: 120px;
+    height: 25px;
+    background-color: LightGray;
+    font-family: Meiryo;
+    font-size: 12px;
+}
+input[type="button"]:hover, select:hover{
+    cursor: pointer;
+}
+#status_done, #status_done_j, #lc_select_done{
+    position: relative;
+    right: -50px;
+    top: 3px;
+    width: 50px;
+    height: 15px;
+    font-size: 8px;
+}
+#status_checkbox, #status_checkbox_j, #location_checkbox{
+    display: none;
+    font-size: 10px;
+    border: 1px solid black;
+    width: 150px;
+    position: absolute;
+    background-color: white;
+}
+#status_select, #status_select_j, #location_select{
+    width: 50px;
+    background-color: white;
+    border-radius: 3px;
+}
+#status_select:hover, #status_select_j:hover, #location_select:hover{
+    cursor: pointer;
+}
+#hit_count{
+    font-size: 12px;
+}
+#check_all, #check_all_j{
+    width: 70px;
+    height: 18px;
+    font-size: 10px;
+}
+.sort{
+    background-color: gray;
+    border: 1px solid white;
+    font-size: 10px;
+}
+.sort:hover{
+    cursor: pointer;
+}
+#status_checkbox div{
+    width: 95%;
+}
+.filter_status{
+    font-size: 11px;
+}
+.filter{
+    width: 50px;
+    height: 30px;
+}
+#log_message_us, #log_message_jpc, #log_message_umin{
+    font-size: 11px;
+    margin, padding: 0px;
+}
+#info{
+    position: absolute;
+    right: 40px;
+    top: 10px;
+    width: 280px;
+    height: 150px;
+}
+#log_process_us, #log_process_jp, #log_process_jp_local{
+    font-size: 10px;
+}
+#result_table_length{
+    display: inline;
+    position: relative;
+}
+/*#result_table_wrapper{
+    position: relative;
+    top: -45px;
+}*/
+#result_table_filter{
+    display: inline;
+    position: relative;
+    left: 30px;
+}
+.dataTables_empty{
+    display: none;
+}
+
+.complete, .s_shuryou{
+    background-color: #4c4c4c;
+}
+.kaishimae, .notyet, .enroll{
+    background-color: #3e5ebb;
+}
+.recruiting, .available, .s_boshuchu, .i_boshuchu{
+    background-color : #D35988;
+}
+.s_keizoku, .active{
+    background-color: #e99f69;
+}
+.g_boshuchu, .chudan, .suspend{
+    background-color : #6ccb90;
+}
+.chushi, .terminate{
+    background-color : #7f7f7f;
+}
+.unknown, .other{
+    background-color : #774400;
+}
+.b_shuryou, .withdrawn{
+    background-color: #e2813a;
+}
+
+
+
+
+
+</style>
+
+
+<script>
+var es_usjp = "";
+var es_jp = "";
+var es_jpc = "";
+var es_trans_jpc = "";
+var es_trans_umin = "";
+var es_trans_jma = "";
+var nctid_arr = [];
+var data_table = "";
+var display_status_j = [];
+var display_status = [];
+var filt_cntry = [];
+var filt_status = [];
+var filt_status_j = [];
+
+function hoge(code){
+    if(13 === code){
+        $("#get_btn").click();
+    }
+}
+
+$(function(){
+
+    var us_cnt = 0;
+    var jp_cnt = 0;
+
+    $.fn.dataTable.ext.errMode = 'none';
+
+    get_nctid_func();
+
+    function get_nctid_func(){
+        $.ajax({
+            type: "GET",
+            //url: "../cgi-bin/get_nctid.py",
+            url: "./nctid.txt",
+            success: function(json){
+                nctid_arr = json.split("\n")
+                //nctid_arr = json["nctid"]
+            }
+        }).fail(function(response, textStatus, jqXHR){
+            // console.log(response)
+            // console.log(textStatus)
+            // console.log(jqXHR)
+        });
+    }
+
+    function get_status_id_jp(){
+        var str = "";
+        var dom = $("input[name='status_j']:checked");
+        for (var i=0; i<dom.length; i++){
+            str += $(dom[i]).attr("sqlname") + "|";
+        }
+        return str.slice(0, -1);
+    }
+
+    function get_status_id_us(){
+        var str = "";
+        var dom = $("input[name='status']:checked");
+        for (var i=0; i<dom.length; i++){
+            str += $(dom[i]).attr("sqlname") + "|";
+        }
+        return str.slice(0, -1);
+    }
+
+    function create_table_header(){
+
+        var html = "\
+        <div id='hit_count'><span>US Clinical Trials <span id='us_hit'>0</span> studies</span>\
+        <span style='position: absolute; right: 10px;'>日本治験数 <span id='jp_hit'>0</span> 件</span></div>\
+        <table width=100% id='result_table' border='1'>\
+            <thead>\
+                <tr class='table_header' id='table_header'>\
+                    <th width='10px'>status<br><span id='status_select'>filter▼</span></th>\
+                    <th width='16px'>ID(URL)</th>\
+                    <th width='40px'>title</th>\
+                    <th width='10px'>phase</th>\
+                    <th width='40px'>condition</th>\
+                    <th width='2px'>min age</th>\
+                    <th width='2px'>gender</th>\
+                    <th width='20px'>intervention</th>\
+                    <th width='10px'>sponser</th>\
+                    <th width='15px'>location<br><span id='location_select'>filter▼</span></th>\
+                    <th width='1px' class='table_blank'></th>\
+                    <th width='10px'>募集状況<br><span id='status_select_j'>filter▼</span></th>\
+                    <th width='20px'>ID(URL)</th>\
+                    <th width='50px'>試験名</th>\
+                    <th width='30px'>対象疾患</th>\
+                    <th width='5px'>フェーズ</th>\
+                    <th width='2px'>年齢</th>\
+                    <th width='2px'>性別</th>\
+                    <th width='8px'>提供元</th>\
+                </tr>\
+                <tr id='filter_header'>\
+                    <td></td>\
+                    <td></td>\
+                    <td></td>\
+                    <td></td>\
+                    <td></td>\
+                    <td></td>\
+                    <td></td>\
+                    <td></td>\
+                    <td></td>\
+                    <td></td>\
+                    <td></td>\
+                    <td></td>\
+                    <td></td>\
+                    <td></td>\
+                    <td></td>\
+                    <td></td>\
+                    <td></td>\
+                    <td></td>\
+                    <td></td>\
+                </tr>\
+            </thead>\
+            <tbody>\
+            </tbody>\
+        </table>\
+        "
+
+
+        return html;
+    }
+
+    function build_filter(){
+
+        var html = 
+        '<div id="status_checkbox" style="left: 10px; top: 175px;">\
+            <input type="button" value="OK" id="status_done">\
+            <div id="f_notyet"><label><input type="checkbox" num="u1" checked>Not yet recruiting</label></div>\
+            <div id="f_recruiting"><label><input type="checkbox" num="u2" checked>Recruiting</label></div>\
+            <div id="f_enroll"><label><input type="checkbox" num="u3" checked>Enrolling</label></div>\
+            <div id="f_active"><label><input type="checkbox" num="u4" checked>Active, not recruiting</label></div>\
+            <div id="f_available"><label><input type="checkbox" num="u5" checked>Available</label></div>\
+            <div id="f_suspend"><label><input type="checkbox" num="u6" checked>Suspended</label></div>\
+            <div id="f_terminate"><label><input type="checkbox" num="u7" checked>Terminated</label></div>\
+            <div id="f_complete"><label><input type="checkbox" num="u8" checked>Completed</label></div>\
+            <div id="f_withdrawn"><label><input type="checkbox" num="u9" checked>Withdrawn</label></div>\
+            <div id="f_unknown"><label><input type="checkbox" num="u10" checked>Unknown</label></div>\
+        </div>\
+        '
+
+        + '<div id="status_checkbox_j" style="left: 50%; top: 175px;">\
+            <input type="button" value="OK" id="status_done_j">\
+            <div id="f_kaishimae"><label><input type="checkbox" num="j1" checked>募集開始前</label></div>\
+            <div id="f_s_boshuchu"><label><input type="checkbox" num="j2" checked>参加者募集中</label></div>\
+            <div id="f_i_boshuchu"><label><input type="checkbox" num="j3" checked>一般募集中</label></div>\
+            <div id="f_g_boshuchu"><label><input type="checkbox" num="j4" checked>限定募集中</label></div>\
+            <div id="f_chushi"><label><input type="checkbox" num="j5" checked>試験中止</label></div>\
+            <div id="f_chudan"><label><input type="checkbox" num="j6" checked>参加者募集中断</label></div>\
+            <div id="f_b_shuryou"><label><input type="checkbox" num="j7" checked>募集終了</label></div>\
+            <div id="f_s_shuryou"><label><input type="checkbox" num="j8" checked>試験終了</label></div>\
+            <div id="f_s_keizoku"><label><input type="checkbox" num="j9" checked>参加者募集終了－試験継続中</label></div>\
+            <div id="f_other"><label><input type="checkbox" num="j10" checked>その他</label></div>\
+        </div>\
+        '
+
+        + '<div id="location_checkbox" style="left: 50%; top: 175px;">\
+            <input type="button" value="OK" id="lc_select_done">\
+            <div id="lc_jp"><label><input type="checkbox" num="lc_jp" checked>Japan</label></div>\
+            <div id="lc_us"><label><input type="checkbox" num="lc_us" checked>United States</label></div>\
+            <div id="lc_other"><label><input type="checkbox" num="lc_other" checked>Others</label></div>\
+        </div>\
+        '
+
+        $("#table_area").append(html);
+    }
+
+    // function add_color(){
+    //     var dom = $(document).find(".status");
+    //     var dom_j = $(document).find(".status_j")
+
+    //     for (var i=0; i<$.merge(dom, dom_j).length; i++){
+    //         var d = $(dom[i]);
+    //         var text = d.text();
+    //         var color = "";
+
+    //         if (text == "試験終了" || text == "Completed"){
+    //             color = "#4c4c4c";
+    //         }else if(text == "参加者募集中" || text == "一般募集中" || text == "Recruiting" || text == "Available"){
+    //             color = "#D35988";
+    //         }else if(text == "限定募集中" || text == "参加者募集中断" || text == "Suspended"){
+    //             color = "#6ccb90";
+    //         }else if(text == "参加者募集終了－試験継続中" || text == "Active, not recruiting"){
+    //             color = "#e99f69";
+    //         }else if(text == "試験中止" || text == "Terminated"){
+    //             color = "#7f7f7f";
+    //         }else if(text == "募集開始前" || text == "Enrolling by invitation" || text == "Not yet recruiting"){
+    //             color = "#3e5ebb";
+    //         }else if(text == "Unknown status" || text == "その他"){
+    //             color = "#774400";
+    //         }
+
+    //         d.css("background-color", color).css("color", "white");
+    //     }
+    // }
+
+    function create_data_table(){
+        data_table = $('#result_table').DataTable({
+            "pageLength": 300,
+            "lengthMenu": [[10, 25, 50, 100, 300, 500, -1], [10, 25, 50, 100, 300, 500, "All"]]
+        })
+    }
+
+    function add_filter_css(){
+        $("#filter_header td").css({
+            "background-image": "url(bg.gif)",
+            "background-repeat": "no-repeat",
+            "background-position": "center right",
+            "cursor": "pointer",
+            "background-color": "LightSkyBlue",
+            "border-top": "none",
+            "height": "10px"
+        });
+    }
+
+
+    function get_data(term, term2, term3, lc){
+
+        var status_str_us = get_status_id_us();
+        us_cnt = 0;
+
+        if(nctid_arr.length == 0){
+            get_nctid_func();
+        }
+
+        es_usjp = new EventSource('./get_us_data.php?term='+term+"&term2="+term2+"&term3="+term3+"&status="+status_str_us+"&location="+lc);
+
+        es_usjp.addEventListener('message', function (event) {
+            if (event.data == "end"){
+                es_usjp.close();
+
+                var status_str = get_status_id_jp();
+                get_trans_jpc("./get_jpc_trans_data.php?"+"term="+term+"&term2="+term2+"&term3="+term3+"&status="+status_str);
+
+                //add_color();
+                $("#log_message_us").text("US finished !");
+                $("#log_process_us").text("");
+
+                //create_data_table();
+
+                add_filter_css();
+
+                if(us_cnt == 0){
+                    $("#table_area").append("<div id='no_result'>US no results.</div>")
+                }
+
+            }else{
+                var data = event.data.split("|");
+                var id = data[1];
+                var db_num = data[0];
+
+
+                us_cnt++;
+                
+                var str = "<tr>";
+                var nct_id = id;
+                var sec_id = data[2];
+                var title = data[3];
+                var status = data[4];
+                var phase = data[5];
+                var cond = data[6];
+                var min_age = data[7];
+                //var max_age = data[7];
+                var gender = data[8];
+                var sponser = data[9];
+                var location = data[10];
+                var intervention_name = data[11];
+
+                if (intervention_name.length >= 50){
+                    intervention_name = intervention_name.slice(1,50)+"..."
+                }
+                if(location.length >= 50){
+                    location = location.slice(1, 50)+"..."
+                }
+                if(cond.length >= 100){
+                    cond = cond.slice(1, 100)+"..."
+                }
+
+                var lc = "";
+                if(location.indexOf("Japan") != -1){
+                    lc = "lc_jp"
+                }else if(location.indexOf("United States") != -1){
+                    lc = "lc_us"
+                }else{
+                    lc = "lc_other"
+                }
+
+                var status_name = status_hash[status]
+                if($.inArray(display_status,status_name)){
+                    display_status.push(status_name)
+                }
+
+                str = "<tr class='"+lc+"' id='" + nct_id + "' db_num='"+db_num+"'>"
+                    + "<td><div class='status "+status_name+"'>" + status + "</div></td>"
+                    + "<td><a href='https://clinicaltrials.gov/ct2/show/" + nct_id + "' target='_blank'>" + nct_id + "</a></td>"
+                    + "<td>" + title + "</td>"
+                    + "<td class='phase'>" + phase + "</td>"
+                    + "<td>" + cond + "</td>"
+                    + "<td class='min_age'>" + min_age + "</td>"
+                    //+ "<td>" + max_age + "</td>"
+                    + "<td class='gender'>" + gender + "</td>"
+                    + "<td>" + intervention_name + "</td>"
+                    + "<td>" + sponser + "</td>"
+                    + "<td class='location'>" + location + "</td>"
+                    + "<td class='table_blank'></td>"
+                    + "<td><div class='status status_j' id='st_"+nct_id+"'></div></td>"
+                    + "<td id='id_" + nct_id + "'></td>"
+                    + "<td id='ab_" + nct_id + "'></td>"
+                    + "<td id='di_" + nct_id + "'></td>"
+                    + "<td id='ph_" + nct_id + "'></td>"
+                    + "<td id='ag_" + nct_id + "'></td>"
+                    + "<td id='gd_" + nct_id + "'></td>"
+                    + "<td id='sp_" + nct_id + "'></td>"
+                    + "</tr>";
+
+                $("#us_hit").text(us_cnt);
+
+                $("#result_table").append(str);
+
+                $("#log_process_us").text("USの"+nct_id+"を取得しています。")
+
+                if(nctid_arr.indexOf(nct_id) != -1){
+                    get_jpc_data(nct_id)
+                }
+
+            }
+
+
+            
+        });
+    }
+
+    function get_jpc_data(nct_id){
+
+        var es_jpc = new EventSource("./get_jpc_data.php?nct_id="+nct_id);
+
+        es_jpc.addEventListener('message', function (event) {
+            es_jpc.close();
+            
+            var data = event.data.split("|");
+            var id = data[0];
+            var abst = data[1];
+            var status = data[2];
+            var disease = data[3];
+            var phase = data[4];
+            var min_age = data[5];
+            var gender = data[6];
+            var sponser = data[7];
+
+            var status_name = status_hash_j[status];
+
+            $("#st_"+nct_id).text(status).addClass("status_j").addClass(status_name);
+            $("#id_"+nct_id).html("<span class='jpc_link'><a href='https://rctportal.niph.go.jp/s/detail/jp?trial_id="+id+"' target='_blank' class='rctlink'>"+id+"</a></span>");
+            $("#ab_"+nct_id).text(abst);
+            $("#di_"+nct_id).text(disease);
+            $("#ph_"+nct_id).text(phase).addClass("phase");
+            $("#ag_"+nct_id).text(min_age).addClass("min_age");
+            $("#gd_"+nct_id).text(gender).addClass("gender");
+            $("#sp_"+nct_id).text(sponser);
+
+            jp_cnt++;
+            
+            $("#jp_hit").text(jp_cnt);
+
+            $("#log_process_jpc").text("USの"+nct_id+"にjapicの"+id+"を紐付けています。")
+
+            //add_color();
+            build_filter();
+
+        });
+    }
+
+    function exportTo(type) {
+        $('#result_table').tableExport({
+            filename: '%YY%%MM%%DD%%hh%%mm%%ss%',
+            format: type
+        });
+    }
+
+    function get_trans_jpc(url){
+        var es_trans_jpc = new EventSource(url);
+        es_trans_jpc.addEventListener('message', function (event) {
+            append_table_tr(es_trans_jpc, event, "jpc");
+        });
+    }
+
+    function get_trans_umin(url){
+        var es_trans_umin = new EventSource(url);
+        es_trans_umin.addEventListener('message', function (event) {
+            append_table_tr(es_trans_umin, event, "umin");
+        });
+    }
+
+    function get_trans_jma(url){
+        var es_trans_jma = new EventSource(url);
+        es_trans_jma.addEventListener('message', function (event) {
+            append_table_tr(es_trans_jma, event, "jma");
+        });
+    }
+
+    function append_table_tr(es, event, id_type){
+        if (event.data == "end"){
+            es.close();
+
+            if(id_type == "jpc"){
+                $("#log_message_jpc").text("JP local (jpc) finished !");
+            }else{
+                $("#log_message_umin").text("JP local (umin) finished !");
+            }
+            
+            $("#log_process_jp").text("");
+            $("#log_process_jp_local").text("");
+            if(jp_cnt == 0){
+                $("#table_area").append("<div id='no_result'>"+id_type+"単独の検索結果はありません。</div>")
+            }
+            //add_color();
+            build_filter();
+
+
+        }else{
+
+            var data = event.data.split("|");
+            if(data[0] == "trans"){
+                $("#drug_txt_t").text(data[1]);
+                $("#drug_txt_t_2").text(data[2]);
+                $("#drug_txt_t_3").text(data[3]);
+                return;
+            }
+
+            var id = data[0];
+            var abst = data[1];
+            var status = data[2];
+            var disease = data[3];
+            var phase = data[4];
+            var min_age = data[5];
+            var gender = data[6];
+            var sponser = data[7];
+
+            var add_flag = true;
+            if(id_type == "jpc"){
+                src = "jp";
+                var str = $(".jpc_link").text()
+                if(str.indexOf(id) != -1){
+                    add_flag = false
+                }
+            }else if(id_type == "umin"){
+                src = "um";
+            }else{
+                src = "jm";
+            }
+
+            var status_name = status_hash_j[status]
+            if($.inArray(display_status_j,status_name)){
+                display_status_j.push(status_name)
+            }
+
+            if (add_flag){
+                jp_cnt++;
+                str = "<tr id='" + id + "'>"
+                    + "<td></td>"
+                    + "<td></td>"
+                    + "<td></td>"
+                    + "<td></td>"
+                    + "<td></td>"
+                    + "<td></td>"
+                    + "<td></td>"
+                    + "<td></td>"
+                    + "<td></td>"
+                    + "<td>Japan</td>"
+                    + "<td class='table_blank'></td>"
+                    + "<td><div class='status_j "+status_name+"'>"+status+"</div></td>"
+                    + "<td><a href='https://rctportal.niph.go.jp/s/detail/"+src+"?trial_id="+id+"' target='_blank' class='rctlink'>"+id+"</a></td>"
+                    + "<td>"+abst+"</td>"
+                    + "<td>"+disease+"</td>"
+                    + "<td class='phase'>"+phase+"</td>"
+                    + "<td class='min_age'>"+min_age+"</td>"
+                    + "<td class='gender'>"+gender+"</td>"
+                    + "<td>"+sponser+"</td>"
+                    + "</tr>";
+
+                $("#result_table").append(str);
+                $("#jp_hit").text(jp_cnt);
+                $("#log_process_jp_local").text("JPの"+id+"を取得しています。")
+
+            }
+
+        }
+
+    }
+
+    var status_hash = {
+        "Not yet recruiting": "notyet",
+        "Recruiting": "recruiting",
+        "Enrolling by invitation": "enroll",
+        "Active, not recruiting": "active",
+        "Suspended": "suspend",
+        "Terminated": "terminate",
+        "Completed": "complete",
+        "Available": "available",
+        "Withdrawn": "withdrawn",
+        "Unknown status": "unknown"
+    }
+
+    var status_hash_j = {
+        "募集開始前": "kaishimae",
+        "一般募集中": "i_boshuchu",
+        "限定募集中": "g_boshuchu",
+        "参加者募集中": "s_boshuchu",
+        "試験中止": "chushi",
+        "参加者募集中断": "chudan",
+        "募集終了": "b_shuryou",
+        "試験終了": "s_shuryou",
+        "参加者募集終了－試験継続中": "s_keizoku",
+        "その他": "other"
+    }
+
+    $("#stop_query").click(function(){
+        var confirm = window.confirm("クエリを中止しますか？")
+        if(confirm){
+            if(es_usjp != ""){
+                es_usjp.close()
+            }
+            if(es_jp != ""){
+                es_jp.close()
+            }
+            if(es_jpc != ""){
+                es_jpc.close()
+            }
+            if(es_trans_jpc != ""){
+                es_trans_jpc.close()
+            }
+            if(es_trans_umin != ""){
+                es_trans_umin.close()
+            }
+            if(es_trans_jma != ""){
+                es_trans_jma.close()
+            }
+        }
+
+    });
+
+    function watching_finish(){
+        var sItvl = setInterval(function(){
+            var us_msg = $("#log_message_us").text()
+            var jpc_msg = $("#log_message_jpc").text()
+            var umin_msg = $("#log_message_umin").text()
+
+            if(us_msg != "" && jpc_msg != "" && umin_msg != ""){
+                clearInterval(sItvl)
+                create_data_table();
+            }
+        }, 1000)
+    }
+
+    
+    function initialize_filter_status(){
+        apply_filt_status(1, "notyet", "u")
+        apply_filt_status(2, "recruiting", "u")
+        apply_filt_status(3, "enroll", "u")
+        apply_filt_status(4, "active", "u")
+        apply_filt_status(5, "available", "u")
+        apply_filt_status(6, "suspend", "u")
+        apply_filt_status(7, "terminate", "u")
+        apply_filt_status(8, "complete", "u")
+        apply_filt_status(9, "withdrawn", "u")
+        apply_filt_status(10, "unknown", "u")
+    }
+
+    function initialize_filter_status_j(){
+        apply_filt_status(1, "kaishimae", "j")
+        apply_filt_status(2, "s_boshuchu", "j")
+        apply_filt_status(3, "i_boshuchu", "j")
+        apply_filt_status(4, "g_boshuchu", "j")
+        apply_filt_status(5, "chushi", "j")
+        apply_filt_status(6, "chudan", "j")
+        apply_filt_status(7, "b_shuryou", "j")
+        apply_filt_status(8, "s_shuryou", "j")
+        apply_filt_status(9, "s_keizoku", "j")
+        apply_filt_status(10, "other", "j")
+    }
+
+    function initialize_filter_lc(){
+        if($("input[num='lc_jp']").prop("checked")){
+            filt_cntry[0] = "Japan"
+        }else{
+            filt_cntry[0] = ""
+        }
+        if($("input[num='lc_us']").prop("checked")){
+            filt_cntry[1] = "United States"
+        }else{
+            filt_cntry[1] = ""
+        }
+        if($("input[num='lc_other']").prop("checked")){
+            filt_cntry[2] = "others"
+        }else{
+            filt_cntry[2] = ""
+        }
+    }
+
+    function apply_filt_status(num, status, type){
+        var hash = "";
+        if(type == "u"){
+            hash = filt_status
+        }else{
+            hash = filt_status_j
+        }
+        if($("input[num='"+type+num+"']").prop("checked")){
+            hash[num-1] = status
+        }else{
+            hash[num-1] = ""
+        }
+    }
+
+    function apply_search_status(status, type){
+        var hash = "";
+        if(type == "u"){
+            hash = filt_status
+        }else{
+            hash = filt_status_j
+        }
+        if($.inArray(status, hash) != -1){
+            return true;
+        }else{
+            return false;
+        }
+    }
+
+
+    $("#get_btn").click(function(){
+
+        var term = $("#drug_txt").val();
+        var term2 = $("#drug_txt_2").val();
+        var term3 = $("#drug_txt_3").val();
+        var lc = $("input[name='lc_select']:checked").val()
+
+        if(es_usjp != ""){
+            es_usjp.close()
+        }
+        if(es_jp != ""){
+            es_jp.close()
+        }
+        if(es_jpc != ""){
+            es_jpc.close()
+        }
+        if(es_trans_umin != ""){
+            es_trans_umin.close()
+        }
+
+
+        filt_cntry = ["Japan","United States","Others"]
+        filt_status = [ "notyet", "recruiting", "enroll", "active", "available", "suspend", "terminate", "complete", "withdrawn", "unknown" ];
+        filt_status_j = [ "kaishimae", "s_boshuchu", "i_boshuchu", "g_boshuchu", "chushi", "chudan", "b_shuryou", "s_shuryou", "s_keizoku", "other" ];
+
+
+        //filt_status = [];
+        //filt_status_j = [];
+        //filt_cntry = [];
+
+        watching_finish();
+
+        $("#result_table").html("")
+        
+        $("#log_message_us").text("");
+        $("#log_message_jpc").text("");
+        $("#log_message_umin").text("");
+
+        $("#log_process_us").text("USサーバーに問い合わせ中...");
+        $("#log_process_jp").text("JPサーバーに問い合わせ中...");
+
+        us_cnt = 0;
+        jp_cnt = 0;
+
+        display_status_j = [];
+
+        if(data_table != ""){
+            data_table.destroy();
+        }
+        
+        $("#no_result").remove();
+
+        if(term == ""){
+            alert("検索テキストを最低一つ左端に入力してください。");
+            return;
+
+        }else{
+            $("#table_area").html(create_table_header());
+
+            get_data(term, term2, term3, lc);
+
+            var status_str = get_status_id_jp();
+            var qry = "term="+term+"&term2="+term2+"&term3="+term3+"&status="+status_str;
+
+            // setTimeout(function(){
+            //     get_trans_jpc("./get_jpc_trans_data.php?"+qry);
+            // }, 100)
+
+            setTimeout(function(){
+                get_trans_umin("./get_umin_trans_data.php?"+qry);
+            }, 100)
+
+            // setTimeout(function(){
+            //     get_trans_jma("./get_jma_trans_data.php?"+qry);
+            // }, 100)
+
+        }
+
+    });
+
+
+
+    $(document).on("#status_select", function(){
+        $("#status_select").trigger("click")
+    });
+    $(document).on("#status_select_j", function(){
+        $("#status_select_j").trigger("click")
+    });
+    $(document).on("#location_select", function(){
+        $("#location_select").trigger("click")
+    });
+
+    $(document).on("click", "#status_select",function(){
+        var result_hash = {}
+        for(key in status_hash){
+            var value = status_hash[key]
+            if($.inArray(value, display_status) != -1){
+                result_hash["f_"+value] = "block"
+            }else{
+                result_hash["f_"+value] = "none"
+            }
+        }
+
+        for(key in result_hash){
+            $("#"+key).css("display", result_hash[key])
+        }
+
+        var status_visible = $("#status_checkbox").css("display");
+        if (status_visible == "none"){
+            $("#status_checkbox").css("display", "block");
+        }else{
+            $("#status_checkbox").css("display", "none");
+        }
+    });
+
+    $(document).on("click", "#status_select_j",function(){
+        var result_hash = {}
+        for(key in status_hash_j){
+            var value = status_hash_j[key]
+            if($.inArray(value, display_status_j) != -1){
+                result_hash["f_"+value] = "block"
+            }else{
+                result_hash["f_"+value] = "none"
+            }
+        }
+
+        for(key in result_hash){
+            $("#"+key).css("display", result_hash[key])
+        }
+
+
+        var status_visible = $("#status_checkbox_j").css("display");
+        if (status_visible == "none"){
+            $("#status_checkbox_j").css("display", "block");
+        }else{
+            $("#status_checkbox_j").css("display", "none");
+        }
+    });
+
+
+    $(document).on("click", "#location_select",function(){
+        var status_visible = $("#location_checkbox").css("display");
+        if (status_visible == "none"){
+            $("#location_checkbox").css("display", "block");
+        }else{
+            $("#location_checkbox").css("display", "none");
+        }
+
+    });
+
+
+
+    $(document).on("click", "#status_done", function(){
+        initialize_filter_status();
+
+        $.fn.dataTable.ext.search.push(
+            function( settings, data, dataIndex ) {
+                var status = "";
+                if(data[0] != ""){
+                    status = status_hash[data[0]]
+                    return apply_search_status(status, "u")
+                }
+            }
+        );
+        data_table.draw();
+        $("#status_checkbox").css("display", "none");
+    });
+
+    
+    $(document).on("click", "#status_done_j", function(){
+        initialize_filter_status_j();
+
+        $.fn.dataTable.ext.search.push(
+            function( settings, data, dataIndex ) {
+                var status = "";
+                if(data[11] != ""){
+                    status = status_hash_j[data[11]]
+                    return apply_search_status(status, "j")
+                }
+            }
+        );
+        data_table.draw();
+        $("#status_checkbox_j").css("display", "none");
+    });
+
+    
+    
+    $(document).on("click", "#lc_select_done",function(){
+        initialize_filter_lc();
+
+        $.fn.dataTable.ext.search.push(
+            function( settings, data, dataIndex ) {
+                if(data[9] == "Japan"){
+                    if($.inArray("Japan", filt_cntry) != -1){
+                        return true;
+                    }else{
+                        return false;
+                    }
+                }else if(data[9] == "United States"){
+                    if($.inArray("United States", filt_cntry) != -1){
+                        return true;
+                    }else{
+                        return false;
+                    }
+                }else{
+                    if($.inArray("others", filt_cntry) != -1){
+                        return true;
+                    }else{
+                        return false;
+                    }
+                }
+            }
+        );
+
+
+        data_table.draw();
+        $("#location_checkbox").css("display", "none");
+
+    });
+
+    $(document).on("click", "#check_all", function(){
+        if($("#check_all").val() == "uncheck all"){
+            var flag = false;
+            $("#check_all").val("check all");
+        }else{
+            var flag = true;
+            $("#check_all").val("uncheck all");
+        }
+        $("#notyet").prop("checked", flag);
+        $("#recruiting").prop("checked", flag);
+        $("#enroll").prop("checked", flag);
+        $("#active").prop("checked", flag);
+        $("#available").prop("checked", flag);
+        $("#suspend").prop("checked", flag);
+        $("#terminate").prop("checked", flag);
+        $("#complete").prop("checked", flag);
+        $("#withdrawn").prop("checked", flag);
+        $("#unknown").prop("checked", flag);
+    });
+
+    $(document).on("click", "#check_all_j", function(){
+        if($("#check_all_j").val() == "uncheck all"){
+            var flag = false;
+            $("#check_all_j").val("check all");
+        }else{
+            var flag = true;
+            $("#check_all_j").val("uncheck all");
+        }
+        $("#kaishimae").prop("checked", flag);
+        $("#s_boshuchu").prop("checked", flag);
+        $("#i_boshuchu").prop("checked", flag);
+        $("#g_boshuchu").prop("checked", flag);
+        $("#chushi").prop("checked", flag);
+        $("#chudan").prop("checked", flag);
+        $("#b_shuryou").prop("checked", flag);
+        $("#s_shuryou").prop("checked", flag);
+        $("#s_keizoku").prop("checked", flag);
+        $("#other").prop("checked", flag);
+    });
+
+
+
+});
+
+
+
+
+
+
+</script>
+
+
+<script>
+
+</script>
+
+
+<script>
+
+//    $(document).on("change", "input[name='location']", function(){
+//       alert("ss")
+//        datatable_result_table.draw();
+//    })
+
+
+
+
+
+
+</script>
+
+
+<body>
+
+<input type="text" id="drug_txt" onkeypress="hoge(event.keyCode);" value=""></input> and
+<input type="text" id="drug_txt_2" onkeypress="hoge(event.keyCode);" value=""></input> and
+<input type="text" id="drug_txt_3" onkeypress="hoge(event.keyCode);"></input>
+
+<br>
+
+<span style="position: relative; left: 0px; font-size: 10px;">訳文(<span id="drug_txt_t"></span>)</span>
+<span style="position: relative; left: 160px; font-size: 10px;">(<span id="drug_txt_t_2"></span>)</span>
+<span style="position: relative; left: 340px; font-size: 10px;">(<span id="drug_txt_t_3"></span>)</span>
+
+
+<br>
+
+
+<input type="button" value="Get Data" id="get_btn" style="position: absolute; left: 600px; top:10px;"></input>
+<!-- <input type="button" value="Export to Excel" style="position: absolute; left: 750px; top:10px;" onclick="exportTo('xls');"> -->
+
+
+<div>
+<span class="filter_status" id="filter_status_u">
+    <input type="button" value="uncheck all" id="check_all">
+    <label><input type="checkbox" name="status" id="notyet" sqlname="Not yet recruiting" checked>Not yet</label>
+    <label><input type="checkbox" name="status" id="recruiting" sqlname="Recruiting" checked>Recruiting</label>
+    <label><input type="checkbox" name="status" id="enroll" sqlname="Enrolling by Invitation" checked>Enrolling</label>
+    <label><input type="checkbox" name="status" id="active" sqlname="Active, not recruiting" checked>Active, not recruiting</label>
+    <label><input type="checkbox" name="status" id="available" sqlname="Available" checked>Available</label>
+    <label><input type="checkbox" name="status" id="suspend" sqlname="Suspended">Suspended</label>
+    <label><input type="checkbox" name="status" id="terminate" sqlname="Terminated">Terminated</label>
+    <label><input type="checkbox" name="status" id="complete" sqlname="Completed">Completed</label>
+    <label><input type="checkbox" name="status" id="withdrawn" sqlname="Withdrawn">Withdrawn</label>
+    <label><input type="checkbox" name="status" id="unknown" sqlname="Unknown">Unknown</label>
+</span>
+</div>
+
+<div>
+<span class="filter_status" id="filter_status_j">
+    <input type="button" value="uncheck all" id="check_all_j">
+    <label><input type="checkbox" name="status_j" id="kaishimae" sqlname="募集開始前" checked>募集開始前</label>
+    <label><input type="checkbox" name="status_j" id="s_boshuchu" sqlname="参加者募集中" checked>参加者募集中</label>
+    <label><input type="checkbox" name="status_j" id="i_boshuchu" sqlname="一般募集中" checked>一般募集中</label>
+    <label><input type="checkbox" name="status_j" id="g_boshuchu" sqlname="限定募集中" checked>限定募集中</label>
+    <label><input type="checkbox" name="status_j" id="chushi" sqlname="試験中止">試験中止</label>
+    <label><input type="checkbox" name="status_j" id="chudan" sqlname="参加者募集中断">参加者募集中断</label>
+    <label><input type="checkbox" name="status_j" id="b_shuryou" sqlname="募集終了">募集終了</label>
+    <label><input type="checkbox" name="status_j" id="s_shuryou" sqlname="試験終了">試験終了</label>
+    <label><input type="checkbox" name="status_j" id="s_keizoku" sqlname="参加者募集終了－試験継続中">参加者募集終了－試験継続中</label>
+    <label><input type="checkbox" name="status_j" id="other" sqlname="その他">その他</label>
+</span>
+</div>
+
+<div>
+    <label><input type="radio" value="all" name="lc_select" checked>All Countries</label>
+    <label><input type="radio" value="jp" name="lc_select">Japan only</label>
+</div>
+
+<div id="info">
+    <input type="button" value="stop query" id="stop_query">
+    <br>
+    <div id="log_message_us"></div>
+    <div id="log_message_jpc"></div>
+    <div id="log_message_umin"></div>
+    <div id="log_process_us"></div>
+    <div id="log_process_jp"></div>
+    <div id="log_process_jp_local"></div>
+
+</div>
+
+<hr>
+
+
+
+
+<a href="./help.html" target='_blank' style="position: absolute; right: 10px; top:5px;">HELP</a>
+
+
+
+<div id="table_area"></div>
+
+<!-- <iframe src="./map.html" width="500px" height="100px" frameborder="0" style="position: absolute; right: 10px; top: 10px;"></iframe>
+<iframe src="./translate.html" style="display: none;" style="position: absolute; right: 0px; top: 0px;"></iframe> -->
+
+
+</body>
+</html>

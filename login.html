@@ -1,0 +1,104 @@
+<html>
+<html lang="ja">
+<head>
+    <meta charset="utf-8">
+    <title>login</title>
+    <meta http-eqiv="Content-Type" content="text/html; charset=UTF-8">
+    <script src="./lib/jquery.1.11.0.min.js"></script>
+</head>
+
+<style>
+body{
+    font-size: 18px;
+    font-family: Meiryo;
+}
+#box{
+    position: absolute;
+    top: 20%;
+    left: 40%;
+}
+
+#login_btn, #passwd, #user{
+    width: 200px;
+    height: 30px;
+    font-size: 18px;
+}
+</style>
+
+<script>
+
+$(function(){
+    $("#login_btn").click(function(){
+        make_user_directory();
+    });
+});
+
+
+make_user_directory = function(){
+    var user_name = $("#user").val()
+    var passwd = $("#passwd").val()
+    localStorage.setItem("user", user_name)
+
+    $("#log").text("ログイン認証しています。")
+
+
+
+    $.ajax({
+        type: "POST",
+        url: "../cgi-bin/make_user_directory.py",
+        data: {
+            "user": user_name,
+            "passwd": passwd
+        },
+        success: function(data){
+
+            console.log(data)
+
+            if(data["ping"]["Components"][0]["Status"] == "FAILED"){
+                $("#log").text(data["ping"]["Components"][0]["StatusMessage"])
+
+            }else{
+                $("#values").attr("action", "./list.html")
+                $("#values").submit()
+            }
+
+        },
+    }).fail(function(response, textStatus, jqXHR){
+        console.log(response)
+        console.log(textStatus)
+        console.log(jqXHR)
+    });
+
+}
+
+
+</script>
+
+<body>
+
+<h3>LOGIN PAGE</h3>
+
+<div id="box">
+    <div>User Name</div>
+    <select id="user">
+        <option value="u">u</option>
+        <option value="e">e</option>
+    </select>
+    <br><br>
+
+    <!-- <form id="values" method="post" action="./list.html"> -->
+    <form id="values" method="post">
+        <div>Password</div>
+        <input type="text" id="passwd" value="">
+        <br><br>
+        <input type="button" id="login_btn" value="LOGIN">
+    </form>
+
+    <br>
+    <div id="log"></div>
+</div>
+
+</body>
+
+</html>
+

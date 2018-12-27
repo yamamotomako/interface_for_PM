@@ -1,0 +1,1170 @@
+
+<style>
+.tab{
+    overflow:hidden;
+    width: 600px;
+    margin-bottom: 3px;
+}
+.tab div{
+    background:#ccc;
+    padding:5px 25px;
+    float:left;
+    margin-right:1px;
+}
+.tab div:hover, .tab_drug div:hover{
+    cursor: pointer;
+    color: gray;
+}
+.tab div.select{background:#eee;}
+/*.content div{background:#eee; padding:20px;}*/
+.hide {display:none;}
+
+.tab_drug{overflow:hidden;}
+.tab_drug div{
+    background:#ccc;
+    padding:5px 25px;
+    float:left;
+    margin-right:1px;
+    margin-bottom: 5px;
+}
+.tab_drug div.select_tab_drug{background:#eee;}
+.hide_drug {display:none;}
+</style>
+
+<style>
+#molecular_table_length{
+    display: inline;
+}
+#molecular_table_paginate{
+    margin-top:5px;
+}
+#molecular_table_filter{
+    float: right;
+    display: inline;
+}
+</style>
+
+<style>
+.content{
+    height: 500px;
+}
+.drug_name{
+    color: #4178BE;
+}
+.drug_name:hover{
+    cursor: pointer;
+    text-decoration: underline;
+}
+.mark{
+    background-color: blue;
+    color: white;
+    width: 20px;
+    height: 20px;
+    text-align: center;
+    margin-right: 10px;
+    display: inline-block;
+    margin-bottom: 5px;
+}
+
+.target_drug{
+    background-color: lightcyan;
+}
+.target_molecular_profile{
+    background-color: lightcyan;
+}
+#drug_left{
+    float: left;
+    width: 20%;
+    height: 100%;
+    overflow-y: scroll;
+}
+#drug_right{
+    margin-top: 10px;
+    float: right;
+    width: 79%;
+    height: 300px;
+}
+#drug_left table tbody tr{
+    height: 30px;
+}
+#drug_left{
+    overflow: scroll;
+}
+#pathway_img{
+    width: 100%;
+    height: 100%;
+}
+#gene_left{
+    float: left;
+    width: 70%;
+/*    height: 800px;
+    overflow-y: scroll;*/
+}
+#gene_left table{
+    width: 100%;
+    table-layout:fixed;
+}
+#gene_left table td{
+    word-wrap:break-word;
+}
+#gene_right{
+    margin-top: 10px;
+    float: right;
+    width: 29%;
+    height: 300px;
+}
+#gene_left table tr:hover{
+    background-color: #EEFFFF;
+    cursor: pointer;
+}
+.pmid{
+    color: blue;
+}
+.pmid:hover{
+    cursor: pointer;
+}
+.tablesorter thead tr th{
+    background-image: url(bg.gif);
+    background-repeat: no-repeat;
+    background-position: center right;
+    cursor: pointer;
+}
+#download_csv{
+    position: absolute;
+    right: 50%;
+}
+#detail_output{
+    position: absolute;
+    right: 50%;
+    font-size: 15px;
+}
+.text_header{
+    font-size: 15px;
+    text-decoration: bold underline;
+    color: skyblue;
+}
+#drug_all_left{
+    width: 40%;
+    float: left;
+}
+#drug_all_right{
+    width: 55%;
+    float: right;
+}
+.moa{
+    display: none;
+}
+.drug_all_each:hover{
+    cursor: pointer;
+}
+
+</style>
+
+
+<script>
+
+var user = $("#username").text()
+var gene_hash = {}
+
+$(function() {
+
+    $(document).on("click", ".drug_name", function(){
+
+        $(".target_drug").removeClass("target_drug");
+
+        var sampleid = $(".target_file").find(".sampleid").text()
+        var folder = $(".target_file").find(".folder").text()
+        var json_path = folder+"/json/"+sampleid+".json"
+
+        if($(".select").attr("id") == "drug_tab_all"){
+            $(this).parent().parent().addClass("target_drug")
+            var drug = $(".target_drug .drug_name").text();
+
+            if($(".select_tab_drug").attr("id") == "overview_tab"){
+                $("#overview_result").html("");
+                build_target_drug_content(json_path, drug);
+
+            }else if($(".select_tab_drug").attr("id") == "clinical_tab"){
+                $("#clinical_result").html("");
+                build_clinical_content(json_path, drug);
+
+            }else if($(".select_tab_drug").attr("id") == "w_clinical_tab"){
+                $("#w_clinical_result").html("");
+                build_watson_clinical_content(json_path, drug);
+
+            }else if($(".select_tab_drug").attr("id") == "pathway_tab"){
+                $("#pathway_result").html("");
+                build_pathway_content(json_path, drug);
+
+            }else if($(".select_tab_drug").attr("id") == "literature_tab"){
+                $("#literature_result").html("");
+                build_literature_content(json_path, drug);
+            }
+
+        }else if($(".select").attr("id") == "summary_tab"){
+
+            var drug = $(this).text()
+
+            $("#overview_result").html("");
+            build_target_drug_content(json_path, drug);
+
+            $("#drug_tab").trigger("click");
+
+        }
+
+
+    })
+
+
+    $(document).on("click", ".tab div", function() {
+        var index = $('.tab div').index(this);
+        // $('.content div').css('display','none');
+        // $('.content div').eq(index).css('display','block');
+        $('.tab div').removeClass('select');
+        $(this).addClass('select')
+
+        var sampleid = $(".target_file").find(".sampleid").text()
+        var folder = $(".target_file").find(".folder").text()
+        var json_path = folder+"/json/"+sampleid+".json"
+
+        if($(this).attr("id") == "drug_tab_all"){
+            $("#summary_result").css("display", "none")
+            $("#drug_result_all").css("display", "block")
+            $("#molecular_result").css("display", "none")
+            $("#graph_result").css("display", "none")
+
+            $("#drug_result_all").html("");
+            build_drug_all_table(json_path);
+
+        }else if($(this).attr("id") == "summary_tab"){
+            $("#summary_result").css("display", "block")
+            $("#drug_result_all").css("display", "none")
+            $("#molecular_result").css("display", "none")
+            $("#graph_result").css("display", "none")
+
+            $("#summary_result").html("");
+            build_summary_table(json_path);
+
+        }else if($(this).attr("id") == "molecular_tab"){
+            $("#summary_result").css("display", "none")
+            $("#drug_result_all").css("display", "none")
+            $("#molecular_result").css("display", "block")
+            $("#graph_result").css("display", "none")
+
+            $("#molecular_result").html("");
+            build_molecular_table(folder, sampleid);
+
+        }else if($(this).attr("id") == "graph_tab"){
+            $("#summary_result").css("display", "none")
+            $("#drug_result_all").css("display", "none")
+            $("#molecular_result").css("display", "none")
+            $("#graph_result").css("display", "block")
+
+            $("#graph_result").html("");
+            build_graph_table(folder, sampleid);
+
+        }
+
+    });
+
+
+    $(document).on("click", ".tab_drug div", function() {
+        $('.tab_drug div').removeClass('select_tab_drug');
+        $(this).addClass('select_tab_drug');
+
+        switch_tab();
+        build_tab_content();
+    });
+
+});
+
+function switch_tab(){
+    var id = $(".select_tab_drug").attr("id");
+    if (id == "overview_tab"){
+        $("#overview_result").css('display','block');
+        $("#clinical_result").css('display','none');
+        $("#w_clinical_result").css('display','none');
+        $("#pathway_result").css('display','none');
+        $("#literature_result").css('display','none');
+
+    }else if(id == "clinical_tab"){
+        $("#overview_result").css('display','none');
+        $("#clinical_result").css('display','block');
+        $("#w_clinical_result").css('display','none');
+        $("#pathway_result").css('display','none');
+        $("#literature_result").css('display','none');
+
+    }else if(id == "w_clinical_tab"){
+        $("#overview_result").css('display','none');
+        $("#clinical_result").css('display','none');
+        $("#w_clinical_result").css('display','block');
+        $("#pathway_result").css('display','none');
+        $("#literature_result").css('display','none');
+
+    }else if(id == "pathway_tab"){
+        $("#overview_result").css('display','none');
+        $("#clinical_result").css('display','none');
+        $("#w_clinical_result").css('display','none');
+        $("#pathway_result").css('display','block');
+        $("#literature_result").css('display','none');
+
+    }else if(id == "literature_tab"){
+        $("#overview_result").css('display','none');
+        $("#clinical_result").css('display','none');
+        $("#w_clinical_result").css('display','none');
+        $("#pathway_result").css('display','none');
+        $("#literature_result").css('display','block');
+
+    }
+}
+
+
+function build_tab_content(){
+    var sampleid = $(".target_file").find(".sampleid").text()
+    var folder = $(".target_file").find(".folder").text()
+    var file_path = folder+"/json/"+sampleid+".json"
+    //var drug = $(".target_drug .drug_name").attr("id")
+    var drug = $(".target_drug").find("td").eq(1).text()
+    var tab_id = $(".select_tab_drug").attr("id")
+
+    if(tab_id == "overview_tab"){
+        $("#overview_result").html("");
+        build_target_drug_content(file_path, drug);
+
+    }else if(tab_id == "clinical_tab"){
+        build_clinical_content(file_path, drug);
+
+    }else if(tab_id == "w_clinical_tab"){
+        build_watson_clinical_content(file_path, drug);
+
+    }else if(tab_id == "pathway_tab"){
+        build_pathway_content(file_path);
+
+    }else if(tab_id == "literature_tab"){
+        build_literature_content(file_path, drug)
+    }
+}
+
+
+function revert_serial_date(serialdate){
+    var result = serialdate.replace(/ /g, "").replace(/\u002f/g, "").replace(/:/g, "")
+    return result;
+}
+
+
+
+function build_graph_table(folder, sampleid){
+    $("#graph_result").html("<div><img src='./heatmap.png'></div>")
+
+
+}
+
+function build_gene_annotation(id){
+
+    $.ajax({
+        type: "GET",
+        url: "./server.php",
+        data: {
+            source: "get_gene_anno",
+            file_path: id
+        },
+        dataType: "json",
+        success: function(json){
+            console.log(json)
+            for (key in json){
+                $("#mp_"+key+" .ApprovedSame").text(json[key]["ApprovedSameCancerDrugs"])
+                $("#mp_"+key+" .InvestSame").text(json[key]["InvestigationalSameCancerDrugs"])
+                $("#mp_"+key+" .ApprovedOther").text(json[key]["ApprovedOtherCancerDrugs"])
+            }
+
+        }
+    }).fail(function(response, textStatus, jqXHR){
+        console.log(response)
+        console.log(textStatus)
+        console.log(jqXHR)
+    });
+}
+
+
+
+// function build_literature_content(id, drug){
+//     $.ajax({
+//         type: "GET",
+//         url: "./server.php",
+//         data: {
+//             source: "get_literature",
+//             file_path: id,
+//             drug: drug
+//         },
+//         dataType: "json",
+//         success: function(data){
+//             // if(Object.keys(data).length == 0){
+//             //     $("#w_clinical_result").append("<p>結果はありません。</p>");
+//             //     return
+//             // }
+//             var html = ""
+//             for (key in data){
+//                 var str_da = "";
+//                 var str_e = "";
+//                 if (key == "DrugAssociations"){
+//                     for (var i=0; i<data[key].length; i++){
+//                         var buf = data[key][i]
+//                         var label = buf["GeneName"]
+//                         var summary = buf["Summary"]
+//                         str_da += "<div>"+label+"</div><div>"+summary+"</div>"
+//                     }
+//
+//                 }else if(key == "Evidence"){
+//                     for (var i=0; i<data[key].length; i++){
+//                         var buf = data[key][i]
+//                         var label = buf["ConditionName"]
+//                         var summary = buf["Summary"]
+//                         str_e += "<div>"+label+"</div><div>"+summary+"</div>"
+//                     }
+//                 }
+//                 html += str_da + "<br><br>" + str_e
+//             }
+//
+//             html = html.replace(/[0-9]{8}/g, "<span class='pmid'>$&</span>")
+//
+//
+//             $("#literature_result").html(html);
+//
+//         }
+//     }).fail(function(response, textStatus, jqXHR){
+//         console.log(response)
+//         console.log(textStatus)
+//         console.log(jqXHR)
+//     });
+// }
+
+
+
+
+function build_molecular_table(folder, sampleid){
+    $.ajax({
+        type: "GET",
+        url: "./result/"+folder+"/tsv/"+sampleid+".tsv",
+        dataType: "text",
+        success: function(data){
+
+            var html_left = "<table id='molecular_table' class='tablesorter'><thead>"
+                    + "<tr><th width='3%'>Sample</th>"
+                    + "<th width='3%'>Chromosome</th>"
+                    + "<th width='3%'>Position</th>"
+                    + "<th width='3%'>GENE</th>"
+                    + "<th width='3%'>Variants</th>"
+                    + "<th width='3%'>VUS</th>"
+                    + "<th width='3%'>Mark</th>"
+                    + "<th width='3%'>TranscriptId</th>"
+                    + "<th width='3%'>VAF</th>"
+                    + "<th width='3%'>DP</th>"
+                    + "<th width='3%'>log2</th>"
+                    + "<th width='4%'>ApprovedSame</th>"
+                    + "<th width='4%'>InvestSame</th>"
+                    + "<th width='4%'>ApprovedOther</th>"
+                    + "<th width='4%'>Guideline</th>"
+                    + "</tr></thead>"
+                    + "<tbody>"
+
+            var lines = data.split("\n")
+            for (var i=1; i<lines.length; i++){
+                var buf = lines[i].split("\t")
+                if (buf[0] == ""){
+                    continue
+                }
+                var str = "<tr id='mp_"+buf[3]+"'>"
+                        + "<td>"+buf[0]+"</td>"
+                        + "<td>"+buf[1]+"</td>"
+                        + "<td>"+buf[2]+"</td>"
+                        + "<td>"+buf[3]+"</td>"
+                        + "<td>"+buf[4]+"</td>"
+                        + "<td>"+buf[5]+"</td>"
+                        + "<td>"+buf[6]+"</td>"
+                        + "<td>"+buf[7]+"</td>"
+                        + "<td>"+buf[8]+"</td>"
+                        + "<td>"+buf[9]+"</td>"
+                        + "<td>"+buf[10]+"</td>"
+                        + "<td class='App.Same'></td>"
+                        + "<td class='Invest.Same'></td>"
+                        + "<td class='App.Other'></td>"
+                        + "<td class='guideline'></td>"
+                        + "</tr>"
+                html_left += str
+            }
+            html_left += "</tbody></table>"
+
+
+            var html_right = "";
+            var html = "<div id='gene_left'>"+html_left+"</div><div id='gene_right'>"+html_right+"</div>"
+            $("#molecular_result").html(html)
+            $("#gene_left").find("tr").eq(1).trigger("click")
+            //$("#molecular_table").tablesorter()
+
+            $('#molecular_table').DataTable({
+                "pageLength": 25,
+                "lengthMenu":[[10,25,50,-1],[10,25,50,"All"]]
+            });
+
+
+            build_gene_annotation(folder+"/json/"+sampleid+".json")
+            //build_guideline()
+
+        },
+
+    }).fail(function(response, textStatus, jqXHR){
+        console.log(response)
+        console.log(textStatus)
+        console.log(jqXHR)
+    });
+}
+
+$(document).on("click", "#gene_left table tr", function(){
+    $("#gene_left").find(".target_molecular_profile").removeClass("target_molecular_profile")
+    $(this).addClass("target_molecular_profile")
+    var gene = $(this).find("td").eq(3).text()
+    var variant = $(this).find("td").eq(4).text()
+
+    var sampleid = $(".target_file").find(".sampleid").text()
+    var folder = $(".target_file").find(".folder").text()
+    var file_path = folder+"/json/"+sampleid+".json"
+
+    $.ajax({
+        type: "GET",
+        url: "./server.php",
+        data: {
+            source: "get_gene",
+            file_path: file_path
+        },
+        dataType: "json",
+        success: function(data){
+            gene_hash = data
+
+            console.log(data)
+
+            var anno_text = data[gene][0].replace(/[0-9]{8}/g, "<span class='pmid'>$&</span>")
+            var vari_text = data[gene][1][variant].replace(/[0-9]{8}/g, "<span class='pmid'>$&</span>")
+
+            var html = "<h2 style='color:blue;'>"+gene+"</h2>"
+                        + "<p style='font-size:12px;'>"+anno_text+"</p>"
+                        + "<h3 style='color:orange;'>"+variant+"</h3>"
+                        + "<p style='font-size:12px;'>"+vari_text+"</p>"
+
+            $("#gene_right").html(html)
+
+        },
+    }).fail(function(response, textStatus, jqXHR){
+        console.log(response)
+        console.log(textStatus)
+        console.log(jqXHR)
+    });
+
+
+
+
+})
+
+
+
+
+$(document).on("click", ".pmid", function(){
+    var pmid = $(this).text()
+    window.open('https://www.ncbi.nlm.nih.gov/pubmed/'+pmid, "pmid");
+})
+
+
+
+
+
+function add_html(evidence_level, drug_name){
+    return "<div><span class='mark'>"+evidence_level+"</span><span id='"+drug_name+"' class='drug_name'>"+drug_name+"</span></div>";
+}
+
+
+
+
+function build_summary_table(id){
+
+    $.ajax({
+        type: "GET",
+        url: "./server.php",
+        data: {
+            source: "parse_json",
+            file_path: id
+        },
+        dataType: "json",
+        success: function(json){
+
+            html = "<table id='result_table' border='1'><tbody>"
+                + "<tr><th>GENE Alteration</th><th>Approved for the same cancer</th><th>Investigational for the same cancer</th><th>Approved for Other Indications</th></tr>"
+
+            for (var gene in json){
+                var value = json[gene];
+
+                app_same_drug_str = ""
+                inv_same_drug_str = ""
+                app_other_drug_str = ""
+
+                for (var i=0; i<json[gene].length; i++){
+                    var buf = json[gene][i];
+                    var drug_type = buf[0];
+                    var phase = buf[1];
+                    var drug_name = buf[2];
+                    var evidence_level = buf[3];
+                    var evidence = buf[4];
+
+                    if (drug_type == "Approve_same"){
+                        app_same_drug_str += add_html(evidence_level, drug_name);
+                    }else if(drug_type == "Invest_same"){
+                        inv_same_drug_str += add_html(evidence_level, drug_name);
+                    }else{
+                        app_other_drug_str += add_html(evidence_level, drug_name);
+                    }
+                }
+
+                html += "<tr><td><span>" + gene + "</span></td>" + "<td>" + app_same_drug_str + "</td><td>" + inv_same_drug_str + "</td><td>" + app_other_drug_str + "</td><tr>"
+            }
+            html += "</tbody></table>"
+
+
+            $("#summary_result").append(html);
+
+            $("#logtext").text("");
+
+            color_evidencelevel();
+
+        }
+    }).fail(function(response, textStatus, jqXHR){
+        console.log(response)
+        console.log(textStatus)
+        console.log(jqXHR)
+    });
+}
+
+
+function build_drug_all_table(id){
+    $.ajax({
+        type: "GET",
+        url: "./server.php",
+        data: {
+            source: "get_drug",
+            file_path: id
+        },
+        dataType: "json",
+        success: function(json){
+            var sort_arr = []
+            for (drug in json){
+                var buf = json[drug]
+                var evidence_level = buf[0]
+                var category = buf[1]
+                var status = buf[2]
+                var moa = buf[3]
+                sort_arr.push([evidence_level,drug,category,status,moa])
+            }
+            sort_arr.sort(function(a,b){
+                var aa = a[0]
+                var bb = b[0]
+                if(aa < bb) return -1;
+                if(aa > bb) return 1;
+                return 0;
+            })
+
+            var html_left = "<div id='drug_all_left'>";
+            var header = "<table><thead><tr>"
+                        + "<th width=10%>Level of Evidence</th>"
+                        + "<th width=10%>Drug Name</th>"
+                        + "<th width=10%>Category</th>"
+                        + "<th width=10%>Status</th>"
+                        // + "<th width=5%>pubmed id</th>"
+                        + "<th width=3% class='moa'>Mechanism of Action</th>"
+                        // + "<th width=25%>FDA Label</th>"
+                        // + "<th width=25%>Approved Trial Description</th>"
+                        + "<tr></thead>"
+
+            html_left += header + "<tbody>"
+
+            var init_drug = sort_arr[0][1]
+
+            for(var i=0; i<sort_arr.length; i++){
+                var buf = sort_arr[i]
+                var drug = buf[1]
+                var evidence_level = buf[0]
+                var category = buf[2]
+                var status = buf[3]
+                var moa = buf[4]
+                var moa_rev = moa.replace(/[0-9]{8}/g, "<span class='pmid'>$&</span>")
+
+                var str = "<tr class='drug_all_each'>"
+                        + "<td style='font-size: 15px;'>"+evidence_level+"</td>"
+                        + "<td style='font-size: 15px;'>"+drug+"</td>"
+                        + "<td style='font-size: 15px;'>"+category+"</td>"
+                        + "<td style='font-size: 15px;'>"+status+"</td>"
+                        + "<td style='font-size: 15px;' class='moa'>"+moa_rev+"</td>"
+                        + "<tr>"
+                html_left += str
+            }
+            html_left += "</tbody></table></div>"
+
+
+            var drug_tab = "<div class='tab_drug'>"
+                     + "<div class='select_tab_drug' id='overview_tab'>Over View</div>"
+                     // + "<div id='clinical_tab'>Clinical Trials</div>"
+                     + "<div id='w_clinical_tab'>Clinical Trials (Watson)</div>"
+                     // + "<div id='pathway_tab'>Pathway</div>"
+                     + "<div id='literature_tab'>GuideLine</div>"
+                     + "</div>"
+
+            var drug_content = "<div class='content_drug'>"
+                     + "<div id='overview_result'></div>"
+                     // + "<div class='hide_drug' id='clinical_result'></div>"
+                     + "<div class='hide_drug' id='w_clinical_result'></div>"
+                     // + "<div class='hide_drug' id='pathway_result'></div>"
+                     + "<div class='hide_drug' id='literature_result'></div>"
+                     + "</div>"
+
+            var html_right = "<div id='drug_all_right'>"
+                        + drug_tab
+                        + drug_content
+                        + "</div>"
+
+            var html = html_left + html_right
+
+            $("#drug_result_all").html(html);
+            $($(".drug_all_each")[0]).trigger("click")
+
+        }
+    }).fail(function(response, textStatus, jqXHR){
+        console.log(response)
+        console.log(textStatus)
+        console.log(jqXHR)
+    });
+}
+
+
+
+$(function() {
+    $(document).on("click", ".drug_all_each", function(){
+        $(".drug_all_each").removeClass("target_drug");
+        $(this).addClass("target_drug")
+
+        build_tab_content();
+
+        //build_target_drug_content(json_path, drug)
+
+    });
+});
+
+
+
+// function build_drug_table(id, flag){
+//     $.ajax({
+//         type: "GET",
+//         url: "./server.php",
+//         data: {
+//             source: "get_drug",
+//             file_path: id
+//         },
+//         dataType: "json",
+//         success: function(json){
+//             if(Object.keys(json).length == 0){
+//                 $("#drug_result").append("<p>結果はありません。</p>");
+//                 return
+//             }
+//
+//             var html = "";
+//             var html_left = "<div id='drug_left'><table border='1' width='100%'><tbody>";
+//             var default_drug = "";
+//
+//             var sort_arr = [];
+//
+//             for(key in json){
+//                 var arr = [];
+//                 arr[0] = key
+//                 arr = arr.concat(json[key])
+//                 sort_arr.push(arr)
+//             }
+//
+//             var index = ["1","2A","2B","3A","3B","4"];
+//
+//             sort_arr.sort(function(a, b){
+//                 if(index.indexOf(a[1]) < index.indexOf(b[1])) return -1;
+//                 if(index.indexOf(a[1]) > index.indexOf(b[1])) return 1;
+//             })
+//
+//             for(var i=0; i<sort_arr.length; i++){
+//                 var drug = sort_arr[i][0];
+//                 var value = json[key];
+//
+//                 var evidence_level = sort_arr[i][1];
+//                 var category = sort_arr[i][2];
+//                 var status = sort_arr[i][3];
+//
+//                 html_left += "<tr><td><span class='mark'>"+evidence_level+"</span><span id='"+drug+"' class='drug_name'>"+drug+"</span></td></tr>"
+//             }
+//
+//             html_left += "</tbody></table></div>";
+//             $("#drug_result").append(html_left);
+//
+//             var default_drug = sort_arr[0][0];
+//             $(html).ready(function(){
+//                 $("tr:contains('"+default_drug+"')").addClass("target_drug")
+//             })
+//
+//             color_evidencelevel();
+//
+//             if(flag){
+//                 build_drug_right_initial(sort_arr[0])
+//             }else{
+//                 var drug_tab = $(".select_tab_drug").attr("id")
+//                 var drug = $(".target_drug .drug_name").text()
+//                 build_drug_right(id, drug, drug_tab)
+//             }
+//
+//         }
+//     }).fail(function(response, textStatus, jqXHR){
+//         console.log(response)
+//         console.log(textStatus)
+//         console.log(jqXHR)
+//     });
+// }
+
+
+// function build_drug_right(json_path, drug, drug_tab){
+//     if(drug_tab == "overview_tab"){
+//         $("#overview_result").html("");
+//         build_target_drug_content(json_path, drug)
+//
+//     }else if(drug_tab == "clinical_tab"){
+//         $("#clinical_result").html("");
+//         build_clinical_content(json_path, drug)
+//
+//     }else if(drug_tab == "w_clinical_tab"){
+//         $("#w_clinical_result").html("");
+//         build_watson_clinical_content(json_path, drug)
+//
+//     }else if(drug_tab == "pathway_tab"){
+//         $("#pathway_result").html("");
+//         build_pathway_content(json_path)
+//     }
+// }
+
+
+
+function build_drug_right_initial(arr){
+
+    var html = build_overview_html(arr)
+    var drug_tab = "<div class='tab_drug'>"
+                + "<div class='select_tab_drug' id='overview_tab'>Over View</div>"
+                // + "<div id='clinical_tab'>Clinical Trials</div>"
+                + "<div id='w_clinical_tab'>Clinical Trials (Watson)</div>"
+                // + "<div id='pathway_tab'>Pathway</div>"
+                + "<div id='literature_tab'>Literature</div>"
+                + "</div>"
+
+    var drug_content = "<div class='content_drug'>"
+                + "<div id='overview_result'>"+html+"</div>"
+                // + "<div class='hide_drug' id='clinical_result'></div>"
+                + "<div class='hide_drug' id='w_clinical_result'></div>"
+                // + "<div class='hide_drug' id='pathway_result'></div>"
+                + "<div class='hide_drug' id='literature_result'></div>"
+                + "</div>"
+
+    var html_right = "<div id='drug_right'>"
+                + drug_tab
+                + drug_content
+                + "</div>"
+
+    $("#drug_result").append(html_right);
+}
+
+
+
+
+function build_pathway_content(id){
+
+    var caseid = $("#"+id+" .caseid").text()
+    var folder = $("#"+id+" .folder").text()
+    var serialno = revert_serial_date($("#"+id+" .serialno").text())
+    var diagnosis_s = $(".target_file .diagnosis").attr("diagnosis_id");
+
+
+    $("#pathway_result").html("<p>KEGGからダウンロードしています。しばらくお待ちください。</p>")
+
+    $.ajax({
+        type: "GET",
+        url: "../cgi-bin/draw_pathway.cgi",
+        data: {
+            caseid: caseid,
+            user: user,
+            serialno: serialno,
+            folder: folder,
+            diagnosis_s: diagnosis_s
+        },
+        success: function(data){
+
+            var png_path = data;
+            var html = "<img id='pathway_img' src='./pathway"+png_path+"'></img>";
+
+
+            $("#pathway_result").html(html)
+
+
+        }
+    }).fail(function(response, textStatus, jqXHR){
+        console.log(response)
+        console.log(textStatus)
+        console.log(jqXHR)
+    });
+}
+
+
+
+
+
+
+
+
+
+function build_target_drug_content(id, drug){
+    $.ajax({
+        type: "GET",
+        url: "./server.php",
+        data: {
+            source: "get_drug_each",
+            file_path: id,
+            drug: drug
+        },
+        dataType: "json",
+        success: function(json){
+            console.log(json)
+
+            var fda_text = json["FDA_text"]
+            var atd_text = json["ATD_text"]
+            var summary = json["Summary"]
+
+            var moa = $(".target_drug").find("td").eq(4).text()
+
+            var html_right = "<div class='text_header'>Mechanism of Action</div>"
+                            + "<div>"+moa+"</div>"
+                            + "<br><br>"
+                            + "<div class='text_header'>FDA Approved Condition</div>"
+                            + "<div>"+fda_text+"</div>"
+                            + "<br><br>"
+                            + "<div class='text_header'>Approved Trials Description</div>"
+                            + "<div>"+atd_text+"</div>"
+                            + "<br><br>"
+                            + "<div class='text_header'>Rationale</div>"
+                            + "<div>"+summary+"</div>"
+
+
+            html_right = html_right.replace(/[0-9]{8}/g, "<span class='pmid'>$&</span>")
+
+            $("#overview_result").html(html_right)
+
+
+        }
+    }).fail(function(response, textStatus, jqXHR){
+        console.log(response)
+        console.log(textStatus)
+        console.log(jqXHR)
+    });
+
+}
+
+
+
+
+function color_evidencelevel(){
+    var dom = $(document).find(".mark");
+
+    for (var i=0; i<dom.length; i++){
+        if($(dom[i]).text() == "4"){
+            $(dom[i]).css("background-color", "#A6266E");
+
+        }else if($(dom[i]).text() == "2B"){
+            $(dom[i]).css("background-color", "#006D5D");
+
+        }else if($(dom[i]).text() == "3A"){
+            $(dom[i]).css("background-color", "#4178BE");
+
+        }else if($(dom[i]).text() == "3B"){
+            $(dom[i]).css("background-color", "#264A60");
+
+        }else if($(dom[i]).text() == "1"){
+            $(dom[i]).css("background-color", "#5AA700");
+
+        }
+
+    }
+}
+
+
+
+function build_overview_html(drug){
+
+    var drug = json[0]
+    var evidence_level = json[1]
+    var category = json[2]
+    var status = json[3]
+    var moa = json[4]
+    var fda = json[5]
+    var atd = json[6]
+    var html = "<span class='mark'>" + evidence_level + "</span>"
+                + "<span class='big_label'>" + drug + "</span>"
+                + "<div>" + category + "</div>"
+                + "<div>" + status + "</div>"
+                + "<br><hr>"
+                + "<div class='text_header'>Mechanism of Action</div>"
+                + "<div>" + moa + "</div>"
+                + "<br><br><div class='text_header'>FDA lavel</div>"
+                + "<div>" + fda + "</div>"
+                + "<br><br><div class='text_header'>Approved Trial Description</div>"
+                + "<div>" + atd + "</div>"
+    return html;
+}
+
+
+
+function build_clinical_content(id, drug){
+
+    $("#clinical_result").html("<iframe id='clinical_html' src='../clinical.html' width='100%' height='500px' overflow-y='scroll'></iframe>")
+
+    $("#clinical_html").on("load", function(e){
+        var body = $("body", this.contentWindow.document);
+        $(body).find("#drug_txt").val(drug);
+        $(body).find("#get_btn").click();
+    })
+}
+
+
+function build_watson_clinical_content(id, drug){
+    console.log(id, drug)
+    $.ajax({
+        type: "GET",
+        url: "./server.php",
+        data: {
+            source: "get_watson_ct",
+            file_path: id,
+            drug: drug
+        },
+        dataType: "json",
+        success: function(json){
+            if(Object.keys(json).length == 0){
+                $("#w_clinical_result").html("<p>結果はありません。</p>");
+                return
+            }
+
+            var html = "<table><tbody>"
+                    + "<tr><th width=10%>NCTID</th>"
+                    + "<th width=30%>Title</th>"
+                    + "<th width=10%>Phase</th>"
+                    + "<th width=10%>Status</th>"
+                    + "<th width=10%>Country List</th></tr>"
+
+            str = ""
+            for(key in json){
+                var nctid = key
+                var phase = json[key]["Phase"]
+                var status = json[key]["RecruitingStatus"]
+                var title = json[key]["Title"]
+                var countrylist = json[key]["CountryList"]
+                var countrylist_str = ""
+                for(var i=0; i<countrylist.length; i++){
+                    countrylist_str += countrylist[i]["Name"]+"<br>"
+                }
+
+                str += "<tr><td><a href='https://clinicaltrials.gov/ct2/show/"+nctid+"' target='_blank'>"+nctid+"</a></td>"
+                    + "<td>"+title+"</td>"
+                    + "<td>"+phase+"</td>"
+                    + "<td>"+status+"</td>"
+                    + "<td>"+countrylist_str+"</td></tr>"
+            }
+            html += str + "</tbody></table>"
+
+
+            $("#w_clinical_result").html(html);
+
+        }
+    }).fail(function(response, textStatus, jqXHR){
+        console.log(response)
+        console.log(textStatus)
+        console.log(jqXHR)
+    });
+}
+
+
+$(function(){
+    $("#detail_output").click(function(){
+
+        //var id = $(".target_file").attr("id")
+
+        var caseid = $(".target_file .caseid").text()
+        var folder = $(".target_file .folder").text()
+        var serialno = revert_serial_date($(".target_file .serialno").text())
+        var user = $("#username").text()
+
+        $.ajax({
+            type: "GET",
+            url: "../cgi-bin/get_detail_info.cgi",
+            data: {
+                user: user,
+                serialno: serialno,
+                folder: folder
+            },
+            success: function(data){
+
+                $("#detail_output").attr("href", "./output/"+folder+".tsv")
+                $("#detail_output").attr("download", "./output/"+folder+".tsv")
+                //$("#detail_output").trigger("click")
+
+
+            }
+        }).fail(function(response, textStatus, jqXHR){
+            console.log(response)
+            console.log(textStatus)
+            console.log(jqXHR)
+        });
+
+        // $('#molecular_table').tableExport({
+        //     filename: '%YY%%MM%%DD%%hh%%mm%%ss%',
+        //     format: "csv"
+        // });
+    })
+})
+
+
+
+
+
+
+
+
+
+</script>
+
+
+
+
+
+
+<body>
+
+<!-- <input type="button" id="download_csv" value="↓ EXPORT csv"> -->
+<!-- <a id="detail_output" href="" download="">Detail output</a> -->
+
+
+<div class="tab">
+    <div id="graph_tab">Graph</div>
+    <div id="summary_tab">Summary</div>
+    <div id="drug_tab_all">Drugs (All)</div>
+    <div class="select" id="molecular_tab">Molecular Profile</div>
+</div>
+
+<div class="content">
+    <div id="graph_result" class="hide"></div>
+    <div id="summary_result" class="hide"></div>
+    <div id="drug_result_all" class="hide"></div>
+    <div id="molecular_result"></div>
+</div>
+
+</body>

@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="utf-8">
+    <meta http-eqiv="Content-Type" content="text/html; charset=UTF-8">
+    <script src="./lib/jquery.1.11.0.min.js"></script>
+    <script src="./lib/jquery-ui-1.12.1/jquery-ui.min.js"></script>
+    <!-- <script src="./lib/pager/scripts/jquery.table.hpaging.min.js"></script> -->
+    <script src="./lib/jquery.dataTables.js"></script>
+<!--     <link rel="stylesheet" type="text/css" href="./lib/jquery.dataTables.css"> -->
+</head>
+
+<style>
+body{
+    font-family: Meiryo;
+    font-size: 12px;
+/*    padding: 0px;
+    margin: 0px;*/
+}
+#list_table_length{
+    display: inline;
+}
+#list_table_info{
+    display: none;
+}
+#list_table_paginate{
+    margin-top:5px;
+}
+#list_table_filter{
+    float: right;
+    display: inline;
+}
+#list_table thead tr th{
+    background-image: url(bg.gif);
+    background-repeat: no-repeat;
+    background-position: center right;
+    cursor: pointer;
+}
+.paginate_button{
+    padding-right: 8px;
+    padding-left: 8px;
+    font-size: 12px;
+}
+.paginate_button:hover{
+    cursor: pointer;
+}
+.current{
+    background-color: gray;
+    color: white;
+}
+
+table{
+    border: 1px solid black;
+    border-collapse: collapse;
+}
+table th, tr, td{
+    border: 1px solid black;
+    border-collapse: collapse;
+    font-size: 12px;
+}
+table .files{
+    font-size: 8px;
+}
+
+.target_file{
+    background-color: lightcyan;
+}
+
+/*#modal{
+    padding: 30px;
+    display: none;
+    width: 500px;
+    height: 700px;
+    border: 1px solid black;
+}
+#modal input{
+    width: 200px;
+    height: 30px;
+    font-size: 16px;
+}
+#modal input[type="file"]{
+    width: 90%;
+}
+#modal input[type="text"]{
+    width: 200px;
+    height: 30px;
+}
+#modal input[type="button"]{
+    width: 50px;
+    height: 30px;
+}*/
+
+#select_file{
+    font-size: 10px;
+}
+p{
+    margin:0px;
+    padding:0px;
+    margin-top: 10px;
+}
+.input_text{
+    width: 300px;
+    height: 30px;
+    font-size: 20px;
+}
+#welcome{
+    position: absolute;
+    right: 10px;
+}
+
+.complete:hover{
+    background-color: #EEFFFF;
+    cursor: pointer;
+}
+.failure{
+    background-color: mistyrose;
+}
+.analyzing{
+    background-color: honeydew;
+}
+.waiting{
+    background-color: lightyellow;
+}
+#result_box{
+    display: none;
+}
+#download_list{
+    position: absolute;
+    right: 50%;
+    top: 5px;
+}
+
+.re-analyze, .delete{
+    cursor: pointer;
+    font-size: 15px;
+    text-align: center;
+}
+.caseid{
+    display: none;
+}
+
+/*#page_number{
+    height: 50px;
+    position: absolute;
+    left: 400px;
+    top: 5px;
+}
+.num{
+    width: 15px;
+    height: 15px;
+    float: left;
+    cursor: pointer;
+    border: solid 1px black;
+    margin: 3px;
+}*/
+
+
+/*.icon{
+    background-image: url("./dna.gif");
+    background-size: cover;
+}*/
+</style>
+
+
+<script>
+
+
+var serial = {}
+var limit = 10;
+var username = "";
+
+$(function(){
+
+    var username = localStorage.getItem("user")
+
+    var html = "<table id='list_table' width='99%'><thead>"
+            + "<tr>"
+            + "<th width='7%'>Folder</th>"
+            + "<th class='table_date' width='7%'>ID</th>"
+            + "<th width='9%'>Diagnosis</th>"
+            + "<th width='9%'>Diagnosis (option)</th>"
+            + "<th width='2%'>Age</th>"
+            + "<th width='2%'>Gender</th>"
+            + "<th width='5%' class='caseid'>CaseID</th>"
+            + "<th width='5%'>PDF</th>"
+            + "<th width='5%'>Molecular Profile Result</th>"
+            + "</tr>"
+            + "</thead></table>"
+
+    $("#json_list").html(html)
+
+    $.ajax({
+        type: "GET",
+        url: "./server.php",
+        data: {
+            source: "get_list"
+        },
+        success: function(text){
+            var buf = text.split("|||")
+            for(var i=0; i<buf.length; i++){
+                if(buf[i] == ""){
+                    continue
+                }
+                var data = buf[i].split("\t")
+                var folder = data[0]
+                var id = data[1]
+                var samplename = data[2]
+                var diagnosis_p = data[3]
+                var diagnosis_s = data[4]
+                var age = data[5]
+                var gender = data[6]
+                var caseid = data[7]
+                var str = "<tr class='complete'>"
+                        + "<td class='folder'>" + folder + "</td>"
+                        + "<td class='sampleid'>" + id + "</td>"
+                        + "<td class='diagnosis_p'>" + diagnosis_p + "</td>"
+                        + "<td class='diagnosis_s'>" + diagnosis_s + "</td>"
+                        + "<td class='age'>" + age + "</td>"
+                        + "<td class='gender'>" + gender + "</td>"
+                        + "<td class='caseid'>" + caseid + "</td>"
+                        + "<td class='pdf'><a href='./result/"+folder+"/pdf/"+id+".pdf' target='_blank'>PDF Report</a></td>"
+                        + "<td class='summarylist'><a href='./result/"+folder+"/tsv/"+id+".tsv' target='_blank'>Summary List</a></td>"
+                        + "</tr>"
+
+                $("#list_table").append(str)
+            }
+
+        },
+    }).fail(function(response, textStatus, jqXHR){
+        console.log(response)
+        console.log(textStatus)
+        console.log(jqXHR)
+    })
+
+
+
+
+    setTimeout(function(){
+        $('#list_table').DataTable({
+            //"order": [[ 0, 'asc' ],[ 1, 'asc' ]],
+            "pageLength": 15,
+            "lengthMenu":[[5,15,30,50,100,-1],[5,15,30,50,100,"All"]]
+        });
+        console.log("settimeout")
+    }, 2000)
+
+    var interval = setInterval(function(){
+        console.log($(".dataTables_empty").text())
+        if($(".dataTables_empty").text() == "No data available in table"){
+            build_datatable();
+        }else{
+            clearInterval(interval)
+        }
+    }, 1500)
+
+    function build_datatable(){
+        $('#list_table').DataTable({
+            //"order": [[ 0, 'asc' ],[ 1, 'asc' ]],
+            "pageLength": 15,
+            "lengthMenu":[[5,15,30,50,100,-1],[5,15,30,50,100,"All"]]
+        });
+    }
+
+
+
+    function convert_serial_date(serialno){
+        var result = serialno.substr(0,4)+"/"+serialno.substr(4,2)+"/"+serialno.substr(6,2)+" "+serialno.substr(8,2)+":"+serialno.substr(10,2)+":"+serialno.substr(12,2)
+        return result;
+    }
+
+    function add_reanalyze_delete(status, serialno){
+        if(status == "complete" || status == "failure"){
+            $("#"+serialno+" .r").text("□").addClass("re-analyze")
+            $("#"+serialno+" .d").text("□").addClass("delete")
+        }
+    }
+
+
+
+    function color_row(status, serialno){
+        if(status == "complete"){
+            $("#"+serialno).addClass("complete")
+            $("#"+serialno).removeClass("analyzing")
+
+        }else if(status == "failure"){
+            $("#"+serialno).addClass("failure")
+            $("#"+serialno).removeClass("analyzing")
+
+        }else if(status == "analyzing"){
+            $("#"+serialno).addClass("analyzing")
+            $("#"+serialno).removeClass("waiting")
+
+        }else if(status == "waiting"){
+            $("#"+serialno).addClass("waiting")
+        }
+    }
+
+
+    $(document).on("click", ".complete", function(){
+        var sampleid = $(this).find(".sampleid").text()
+        var folder = $(this).find(".folder").text()
+        var json_path = folder+"/json/"+sampleid+".json"
+
+        $("#result_box").css("display","block");
+        $(".target_file").removeClass("target_file")
+        $(this).addClass("target_file");
+
+        var active_tab = $(".select").attr("id")
+        if(active_tab == "summary_tab"){
+            $("#summary_result").html("");
+            build_summary_table(json_path);
+
+        }else if(active_tab == "molecular_tab"){
+            $("#molecular_result").html("");
+            build_molecular_table(folder, sampleid);
+
+        }else{
+            $("#drug_left").remove()
+            build_drug_all_table(json_path)
+
+
+//ここ
+
+
+
+            //build_drug_table(file_path);
+        }
+
+
+    });
+
+
+    function get_date(d){
+        var year = d.getYear()
+        var month = d.getMonth() + 1
+        var day = d.getDate()
+        var hour = d.getHours()
+        var min = d.getMinutes()
+        var sec = d.getSeconds()
+        //var msec = d.getMilliseconds()
+
+        if (year < 2000){ year += 1900}
+        if (month < 10){ month = "0" + month}
+        if (day < 10){ day = "0" + day}
+        if (hour < 10){ hour = "0" + hour}
+        if (min < 10){ min = "0" + min}
+        if (sec < 10){ sec = "0" + sec}
+        //if (msec < 10){ msec = "0" + msec}
+
+        return String(year) + String(month) + String(day) + String(hour) + String(min) + String(sec)
+    }
+
+
+    $("#download_list").click(function(){
+        $('#list_table').tableExport({
+            filename: '%YY%%MM%%DD%%hh%%mm%%ss%',
+            format: "csv"
+        });
+    })
+
+
+})
+
+
+</script>
+
+<!-- <script>
+
+var limit = 5;
+
+
+$(function(){
+
+    function build_pager(){
+        var num = $("#page_num").text()*1
+        var row = $("#list_table").find("tr").length-1;
+
+        for(var i=1; i<=row; i++){
+            if(i*1<((num-1)*limit+1)*1 || i*1>(num*limit)*1){
+                $("#list_table tr:eq("+i+")").css("display", "none")
+            }else{
+                $("#list_table tr:eq("+i+")").css("display", "table-row")
+            }
+        }
+    }
+
+    $("#prev").click(function(){
+        var num = $("#page_num").text()*1
+        if (num <= 1){
+            return
+        }
+        $("#page_num").text(num-1)
+
+        build_pager();
+    })
+
+    $("#next").click(function(){
+        var num = $("#page_num").text()*1
+        var row = $("#list_table").find("tr").length-1;
+
+        if (num >= Math.ceil(row/limit)){
+            return
+        }
+        $("#page_num").text(num+1)
+
+        build_pager();
+    })
+
+    $("#page_num").trigger("change", function(){
+        build_pager();
+    });
+
+})
+
+
+</script> -->
+
+<body>
+
+
+
+<!-- <input type="button" id="download_list" value="↓ EXPORT csv"> -->
+
+<!-- <div id="page_number">
+    <div id="prev" class="num">＜</div>
+    <div id="page_num" class="num">1</div>
+    <div id="next" class="num">＞</div>
+</div> -->
+<div id="json_list"></div>
+
+
+</body>
+
+
+</html>
